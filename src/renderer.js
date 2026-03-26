@@ -199,6 +199,16 @@ async function startListening() {
   try {
     const microphoneAccess = await bridge.ensureMicrophoneAccess();
     if (!microphoneAccess?.ok) {
+      if (microphoneAccess?.status === 'denied') {
+        throw new Error(
+          '麥克風權限已被 macOS 拒絕。請到 System Settings > Privacy & Security > Microphone 開啟 Live Subtitle Translator，或執行 `tccutil reset Microphone com.sean9112.live-subtitle-translator` 後重試。',
+        );
+      }
+
+      if (microphoneAccess?.status === 'restricted') {
+        throw new Error('麥克風權限目前受系統限制，無法由這個 App 直接要求。');
+      }
+
       throw new Error('麥克風權限被拒絕。請到系統設定允許這個 App 使用麥克風後再試一次。');
     }
 

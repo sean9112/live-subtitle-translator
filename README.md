@@ -70,7 +70,7 @@ GitHub Actions is configured in `.github/workflows/build-desktop.yml` to build:
 - The first launch downloads the local models from Hugging Face and stores them under the Electron user data cache. After that, inference runs locally on the machine.
 - Translation quality is usable for a prototype, but it is not yet tuned for long conversations, speaker diarization, or domain-specific vocabulary.
 - On Linux, transparent overlay behavior depends on the desktop environment. This build automatically disables click-through there to avoid making the subtitle window impossible to interact with.
-- On macOS, microphone access may need to be approved in `System Settings > Privacy & Security > Microphone` the first time you start listening.
+- On macOS, microphone access may need to be approved in `System Settings > Privacy & Security > Microphone` the first time you start listening. If the permission was previously denied and no prompt appears, reset it with `tccutil reset Microphone com.sean9112.live-subtitle-translator`.
 
 ## Known launch issue
 

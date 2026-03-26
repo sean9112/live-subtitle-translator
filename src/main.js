@@ -601,6 +601,10 @@ async function ensureMicrophoneAccess() {
     return { ok: true, status: currentStatus, prompted: false };
   }
 
+  if (currentStatus === 'denied' || currentStatus === 'restricted') {
+    return { ok: false, status: currentStatus, prompted: false };
+  }
+
   const granted = await systemPreferences.askForMediaAccess('microphone');
   return {
     ok: granted,
