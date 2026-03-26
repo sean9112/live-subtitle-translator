@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Subtitle Translator Control Panel</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="panel-shell">
+      <header class="hero-card">
+        <p class="eyebrow">Tray-First Subtitle Utility</p>
+        <h1>字幕控制面板</h1>
+        <p class="hero-copy">
+          常駐在 menu bar / system tray，字幕會以獨立透明 overlay 顯示。
+        </p>
+        <div class="hero-actions">
+          <span id="status-badge" class="status-badge idle">待機中</span>
+          <button id="start-stop-button" class="primary-button" type="button">
+            開始收音
+          </button>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>語言方向</h2>
+          <p>目前先支援繁中（台灣）和英文互譯。</p>
+        </div>
+        <div class="stack">
+          <label class="field">
+            <span>輸入語言</span>
+            <select id="source-language">
+              <option value="zh-TW">中文（台灣）</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>輸出語言</span>
+            <input id="target-language" type="text" value="English" readonly />
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>字幕窗</h2>
+          <p>把 overlay 當成實際字幕層，控制面板只負責設定與歷史。</p>
+        </div>
+
+        <div class="stack">
+          <label class="toggle-row">
+            <span>顯示字幕窗</span>
+            <input id="overlay-visible" type="checkbox" checked />
+          </label>
+
+          <label class="toggle-row">
+            <span>永遠置頂</span>
+            <input id="always-on-top" type="checkbox" checked />
+          </label>
+
+          <label class="toggle-row">
+            <span>點擊穿透</span>
+            <input id="click-through" type="checkbox" />
+          </label>
+
+          <label class="field">
+            <span>背景深度</span>
+            <div class="range-row">
+              <input id="overlay-opacity" type="range" min="0" max="100" step="1" value="0" />
+              <strong id="overlay-opacity-value">0%</strong>
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <section class="card preview-card">
+        <div class="section-heading">
+          <h2>即時預覽</h2>
+          <p id="runtime-hint">初次啟動會下載本地模型，完成後會快取到電腦上。</p>
+        </div>
+        <div id="translation-output" class="preview-translation">
+          按下「開始收音」後，翻譯字幕會顯示在這裡。
+        </div>
+        <div id="transcription-output" class="preview-original">
+          原文字幕會同步顯示在這裡。
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>診斷</h2>
+          <p>顯示最近幾步執行狀態，方便快速定位是哪一段沒跑到。</p>
+        </div>
+        <div class="compact-actions diagnostic-actions">
+          <button id="refresh-logs-button" class="ghost-button" type="button">
+            重新整理診斷
+          </button>
+          <button id="clear-logs-button" class="ghost-button" type="button">
+            清除診斷
+          </button>
+          <div></div>
+        </div>
+        <div id="diagnostic-list" class="diagnostic-list"></div>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>最近字幕</h2>
+          <p>保留最近 8 筆結果，方便你邊講邊校對。</p>
+        </div>
+        <div id="history-list" class="history-list"></div>
+      </section>
+    </div>
+
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>

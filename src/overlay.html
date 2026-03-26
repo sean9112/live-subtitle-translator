@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subtitle Overlay</title>
+    <link rel="stylesheet" href="./overlay.css" />
+  </head>
+  <body>
+    <div id="subtitle-shell" class="subtitle-shell idle">
+      <div class="overlay-meta">
+        <span id="overlay-status" class="overlay-status">待機中</span>
+        <span id="overlay-language" class="overlay-language">中文（台灣） -> English</span>
+      </div>
+      <div id="overlay-translation" class="overlay-translation">
+        開始收音後，翻譯字幕會顯示在這裡。
+      </div>
+      <div id="overlay-original" class="overlay-original">
+        原文字幕會同步顯示在這裡。
+      </div>
+    </div>
+
+    <script type="module" src="./overlay.js"></script>
+  </body>
+</html>

@@ -1,0 +1,67 @@
+{
+  "name": "live-subtitle-translator",
+  "version": "0.1.0",
+  "description": "Cross-platform local live subtitle translator built with Electron.",
+  "author": "sean9112",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "generate:icons": "python3 ./scripts/generate-icons.py",
+    "check": "node ./scripts/check.mjs",
+    "smoke": "node ./scripts/smoke.mjs",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.sean9112.live-subtitle-translator",
+    "productName": "Live Subtitle Translator",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json",
+      "README.md"
+    ],
+    "icon": "assets/icons/icon.png",
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "assets/icons/app.icns",
+      "category": "public.app-category.productivity",
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icons/app.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "assets/icons/png",
+      "category": "Utility",
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "Live Subtitle Translator"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.7.2",
+    "opencc-js": "^1.0.5"
+  },
+  "devDependencies": {
+    "electron": "^40.7.0",
+    "electron-builder": "^26.0.12"
+  }
+}
