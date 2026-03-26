@@ -10,6 +10,7 @@ import {
   nativeImage,
   screen,
   session,
+  systemPreferences,
 } from 'electron';
 import {
   configureModelCache,
@@ -590,6 +591,24 @@ function configureMediaPermissions() {
   );
 }
 
+async function ensureMicrophoneAccess() {
+  if (process.platform !== 'darwin') {
+    return { ok: true, status: 'granted', prompted: false };
+  }
+
+  const currentStatus = systemPreferences.getMediaAccessStatus('microphone');
+  if (currentStatus === 'granted') {
+    return { ok: true, status: currentStatus, prompted: false };
+  }
+
+  const granted = await systemPreferences.askForMediaAccess('microphone');
+  return {
+    ok: granted,
+    status: granted ? 'granted' : systemPreferences.getMediaAccessStatus('microphone'),
+    prompted: true,
+  };
+}
+
 if (!hasSingleInstanceLock) {
   app.quit();
 } else {
@@ -623,6 +642,10 @@ if (!hasSingleInstanceLock) {
 
     ipcMain.handle('subtitle:warmup-models', async (_event, payload) => {
       return warmupModels(payload);
+    });
+
+    ipcMain.handle('subtitle:ensure-microphone-access', async () => {
+      return ensureMicrophoneAccess();
     });
 
     ipcMain.handle('subtitle:process-audio', async (_event, payload) => {

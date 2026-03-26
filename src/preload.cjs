@@ -1,11 +1,12 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-const BRIDGE_VERSION = '2026-03-26-bridge-1';
+const BRIDGE_VERSION = '2026-03-26-bridge-2';
 
 const subtitleBridge = {
   bridgeVersion: BRIDGE_VERSION,
   bridgeMethods: [
     'getRuntimeInfo',
+    'ensureMicrophoneAccess',
     'warmupModels',
     'processAudio',
     'updateDisplay',
@@ -17,6 +18,8 @@ const subtitleBridge = {
     'onTrayCommand',
   ],
   getRuntimeInfo: () => ipcRenderer.invoke('subtitle:get-runtime-info'),
+  ensureMicrophoneAccess: () =>
+    ipcRenderer.invoke('subtitle:ensure-microphone-access'),
   warmupModels: (payload) => ipcRenderer.invoke('subtitle:warmup-models', payload),
   processAudio: (payload) => ipcRenderer.invoke('subtitle:process-audio', payload),
   updateDisplay: (payload) => ipcRenderer.invoke('subtitle:update-display', payload),

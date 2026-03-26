@@ -1,4 +1,4 @@
-export const EXPECTED_BRIDGE_VERSION = '2026-03-26-bridge-1';
+export const EXPECTED_BRIDGE_VERSION = '2026-03-26-bridge-2';
 
 export class BridgeClient {
   getBridge() {
@@ -35,6 +35,10 @@ export class BridgeClient {
 
   async getRuntimeInfo() {
     return this.requireMethod('getRuntimeInfo')();
+  }
+
+  async ensureMicrophoneAccess() {
+    return this.requireMethod('ensureMicrophoneAccess')();
   }
 
   async warmupModels(payload) {

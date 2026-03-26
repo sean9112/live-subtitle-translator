@@ -197,6 +197,11 @@ async function startListening() {
   ui.setButtonsDisabled(true);
 
   try {
+    const microphoneAccess = await bridge.ensureMicrophoneAccess();
+    if (!microphoneAccess?.ok) {
+      throw new Error('麥克風權限被拒絕。請到系統設定允許這個 App 使用麥克風後再試一次。');
+    }
+
     await warmupCurrentModels();
     logAndRender('listen', '準備呼叫 getUserMedia');
     await capture.start();

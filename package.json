@@ -19,6 +19,10 @@
     "appId": "com.sean9112.live-subtitle-translator",
     "productName": "Live Subtitle Translator",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "asarUnpack": [
+      "node_modules/sharp/**/*",
+      "node_modules/@img/**/*"
+    ],
     "files": [
       "src/**/*",
       "assets/**/*",
@@ -33,7 +37,8 @@
       "icon": "assets/icons/app.icns",
       "category": "public.app-category.productivity",
       "extendInfo": {
-        "LSUIElement": true
+        "LSUIElement": true,
+        "NSMicrophoneUsageDescription": "Live Subtitle Translator needs microphone access to transcribe and translate live speech on device."
       }
     },
     "win": {

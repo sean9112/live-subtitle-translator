@@ -1,4 +1,3 @@
-import { env, pipeline } from '@huggingface/transformers';
 import * as OpenCC from 'opencc-js';
 
 const MODELS = {
@@ -16,12 +15,33 @@ const whisperLanguageMap = {
 
 const translatorCache = new Map();
 let asrPipelinePromise = null;
+let transformersModulePromise = null;
+let configuredModelCacheDir = null;
 
 const toTaiwanTraditional = OpenCC.Converter({ from: 'cn', to: 'twp' });
 
+async function getTransformersModule() {
+  if (!transformersModulePromise) {
+    transformersModulePromise = import('@huggingface/transformers').then((module) => {
+      if (configuredModelCacheDir) {
+        module.env.cacheDir = configuredModelCacheDir;
+        module.env.allowLocalModels = true;
+      }
+
+      return module;
+    });
+  }
+
+  return transformersModulePromise;
+}
+
 export function configureModelCache(cacheDir) {
-  env.cacheDir = cacheDir;
-  env.allowLocalModels = true;
+  configuredModelCacheDir = cacheDir;
+
+  void getTransformersModule().then(({ env }) => {
+    env.cacheDir = cacheDir;
+    env.allowLocalModels = true;
+  });
 }
 
 function getLanguageCode(language) {
@@ -34,10 +54,12 @@ function getLanguageCode(language) {
 
 async function getAsrPipeline() {
   if (!asrPipelinePromise) {
-    asrPipelinePromise = pipeline(
-      'automatic-speech-recognition',
-      MODELS.asr,
-      { quantized: true },
+    asrPipelinePromise = getTransformersModule().then(({ pipeline }) =>
+      pipeline(
+        'automatic-speech-recognition',
+        MODELS.asr,
+        { quantized: true },
+      ),
     );
   }
 
@@ -56,7 +78,9 @@ async function getTranslator(sourceLanguage, targetLanguage) {
     throw new Error(`No translator model configured for ${key}`);
   }
 
-  const translatorPromise = pipeline('translation', model, { quantized: true });
+  const translatorPromise = getTransformersModule().then(({ pipeline }) =>
+    pipeline('translation', model, { quantized: true }),
+  );
   translatorCache.set(key, translatorPromise);
   return translatorPromise;
 }
