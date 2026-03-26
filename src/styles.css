@@ -249,6 +249,15 @@ input[type='range'] {
   gap: 10px;
 }
 
+.inline-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.inline-actions .ghost-button {
+  min-width: 140px;
+}
+
 .preview-card {
   display: grid;
   gap: 14px;

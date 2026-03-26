@@ -6,6 +6,13 @@ const targetLanguageMap = {
   'zh-TW': '中文（台灣）',
 };
 
+function createDefaultInputDeviceOption() {
+  const option = document.createElement('option');
+  option.value = '';
+  option.textContent = '系統預設輸入裝置';
+  return option;
+}
+
 export function getTargetLanguage(sourceLanguage) {
   return sourceLanguage === 'zh-TW' ? 'en' : 'zh-TW';
 }
@@ -14,6 +21,8 @@ export function createControlUI() {
   const refs = {
     sourceLanguageSelect: document.getElementById('source-language'),
     targetLanguageInput: document.getElementById('target-language'),
+    inputDeviceSelect: document.getElementById('input-device'),
+    refreshDevicesButton: document.getElementById('refresh-devices-button'),
     overlayVisibleCheckbox: document.getElementById('overlay-visible'),
     alwaysOnTopCheckbox: document.getElementById('always-on-top'),
     clickThroughCheckbox: document.getElementById('click-through'),
@@ -39,12 +48,17 @@ export function createControlUI() {
       refs.targetLanguageInput.value =
         targetLanguageMap[getTargetLanguage(refs.sourceLanguageSelect.value)];
     },
+    getInputDeviceId() {
+      return refs.inputDeviceSelect.value;
+    },
     setStatus(kind, text) {
       refs.statusBadge.className = `status-badge ${kind}`;
       refs.statusBadge.textContent = text;
     },
     setButtonsDisabled(disabled) {
       refs.startStopButton.disabled = disabled;
+      refs.refreshDevicesButton.disabled = disabled;
+      refs.inputDeviceSelect.disabled = disabled;
     },
     setRuntimeHint(text) {
       refs.runtimeHint.textContent = text;
@@ -56,7 +70,26 @@ export function createControlUI() {
     },
     setListeningState(isListening) {
       refs.sourceLanguageSelect.disabled = isListening;
+      refs.inputDeviceSelect.disabled = isListening;
+      refs.refreshDevicesButton.disabled = isListening;
       refs.startStopButton.textContent = isListening ? '停止收音' : '開始收音';
+    },
+    renderInputDevices(devices, selectedDeviceId = '') {
+      refs.inputDeviceSelect.innerHTML = '';
+      refs.inputDeviceSelect.append(createDefaultInputDeviceOption());
+
+      devices.forEach((device, index) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.textContent =
+          device.label || `音訊輸入裝置 ${index + 1}`;
+        refs.inputDeviceSelect.append(option);
+      });
+
+      refs.inputDeviceSelect.value = selectedDeviceId;
+      if (refs.inputDeviceSelect.value !== selectedDeviceId) {
+        refs.inputDeviceSelect.value = '';
+      }
     },
     renderHistory(history) {
       refs.historyList.innerHTML = '';

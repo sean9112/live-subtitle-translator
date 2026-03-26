@@ -24,6 +24,7 @@ For local verification on this machine, launch the app from a normal macOS Termi
 ## How it behaves now
 
 - The main control panel is for language direction, overlay settings, and subtitle history.
+- The control panel also lets you switch audio input devices when the system default input ends up silent.
 - The subtitle overlay is a separate frameless window meant to stay on screen while you work.
 - By default, `點擊穿透` is off, so you can drag the whole subtitle window directly.
 - If you turn `點擊穿透` on, the overlay will stop intercepting clicks until you turn it off again.
@@ -34,6 +35,7 @@ For local verification on this machine, launch the app from a normal macOS Termi
 - UI state is now persisted with an atomic write path, so a half-written settings file will not block the next launch.
 - The app now enforces a single running instance to avoid stale background processes and state-file races.
 - On macOS packaging, the app is configured as a menu-bar-style utility with `LSUIElement`.
+- The packaged macOS build now also injects microphone usage text into the Electron helper apps so packaged permission prompts behave more like the dev build.
 
 ## Platform notes
 
@@ -71,6 +73,7 @@ GitHub Actions is configured in `.github/workflows/build-desktop.yml` to build:
 - Translation quality is usable for a prototype, but it is not yet tuned for long conversations, speaker diarization, or domain-specific vocabulary.
 - On Linux, transparent overlay behavior depends on the desktop environment. This build automatically disables click-through there to avoid making the subtitle window impossible to interact with.
 - On macOS, microphone access may need to be approved in `System Settings > Privacy & Security > Microphone` the first time you start listening. If the permission was previously denied and no prompt appears, reset it with `tccutil reset Microphone com.sean9112.live-subtitle-translator`.
+- If packaged macOS audio comes through as silent PCM, use the control panel's input-device selector instead of the system default input and retry.
 
 ## Known launch issue
 

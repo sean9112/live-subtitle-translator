@@ -19,6 +19,7 @@
     "appId": "com.sean9112.live-subtitle-translator",
     "productName": "Live Subtitle Translator",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "afterPack": "./scripts/after-pack.cjs",
     "asarUnpack": [
       "node_modules/sharp/**/*",
       "node_modules/@img/**/*"
@@ -35,6 +36,8 @@
         "dmg"
       ],
       "icon": "assets/icons/app.icns",
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
       "category": "public.app-category.productivity",
       "extendInfo": {
         "LSUIElement": true,

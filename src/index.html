@@ -49,6 +49,26 @@
 
       <section class="card">
         <div class="section-heading">
+          <h2>收音裝置</h2>
+          <p>如果預設麥克風是靜音來源，可以在這裡直接切換輸入裝置。</p>
+        </div>
+        <div class="stack">
+          <label class="field">
+            <span>輸入裝置</span>
+            <select id="input-device">
+              <option value="">系統預設輸入裝置</option>
+            </select>
+          </label>
+          <div class="inline-actions">
+            <button id="refresh-devices-button" class="ghost-button" type="button">
+              重新讀取裝置
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
           <h2>字幕窗</h2>
           <p>把 overlay 當成實際字幕層，控制面板只負責設定與歷史。</p>
         </div>

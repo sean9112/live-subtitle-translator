@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -5,6 +6,17 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.dirname(__dirname);
+const requiredFiles = [
+  path.join(projectRoot, 'build/entitlements.mac.plist'),
+  path.join(projectRoot, 'scripts/after-pack.cjs'),
+];
+
+for (const filePath of requiredFiles) {
+  if (!fs.existsSync(filePath)) {
+    console.error(`Missing required packaging file: ${filePath}`);
+    process.exit(1);
+  }
+}
 
 const checks = [
   ['node', ['--check', path.join(projectRoot, 'src/main.js')]],
@@ -17,6 +29,7 @@ const checks = [
   ['node', ['--check', path.join(projectRoot, 'src/translation-service.js')]],
   ['node', ['--check', path.join(projectRoot, 'src/bridge-client.js')]],
   ['node', ['--check', path.join(projectRoot, 'src/logger.js')]],
+  ['node', ['--check', path.join(projectRoot, 'scripts/after-pack.cjs')]],
   ['python3', ['-m', 'py_compile', path.join(projectRoot, 'scripts/generate-icons.py')]],
   ['node', [path.join(projectRoot, 'scripts/pcm-utils-test.mjs')]],
   ['node', [path.join(projectRoot, 'scripts/smoke.mjs')]],

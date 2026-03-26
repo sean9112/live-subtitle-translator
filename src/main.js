@@ -605,11 +605,10 @@ async function ensureMicrophoneAccess() {
     return { ok: false, status: currentStatus, prompted: false };
   }
 
-  const granted = await systemPreferences.askForMediaAccess('microphone');
   return {
-    ok: granted,
-    status: granted ? 'granted' : systemPreferences.getMediaAccessStatus('microphone'),
-    prompted: true,
+    ok: true,
+    status: currentStatus,
+    prompted: false,
   };
 }
 

@@ -12,6 +12,7 @@ const state = {
   isProcessing: false,
   queue: [],
   history: [],
+  silentChunkStreak: 0,
 };
 
 const bridge = new BridgeClient();
@@ -20,6 +21,9 @@ const capture = new PcmCapture({
   chunkDurationMs: RECORDER_TIMESLICE_MS,
   onChunk: async (samples) => {
     await enqueueSamples(samples);
+  },
+  onDebug: (message) => {
+    logAndRender('capture', message);
   },
 });
 
@@ -32,12 +36,45 @@ function logAndRender(type, message) {
   renderDiagnostics();
 }
 
+async function cleanupCaptureGraph() {
+  if (!capture.isRunning) {
+    return;
+  }
+
+  try {
+    await capture.stop();
+  } catch (error) {
+    logAndRender('cleanup-error', `清理收音資源失敗：${describeError(error)}`);
+  }
+}
+
+async function enterErrorState(message) {
+  await cleanupCaptureGraph();
+  state.isListening = false;
+  state.isProcessing = false;
+  state.queue = [];
+  state.silentChunkStreak = 0;
+  ui.setStatus('idle', '錯誤');
+  ui.setRuntimeHint(message);
+  ui.setListeningState(false);
+
+  try {
+    await syncSessionState('error');
+  } catch (error) {
+    logAndRender('error', describeError(error));
+  }
+}
+
 function formatClock() {
   return new Intl.DateTimeFormat('zh-TW', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
   }).format(new Date());
+}
+
+function formatAudioInputLabel(device, index) {
+  return device.label || `音訊輸入裝置 ${index + 1}`;
 }
 
 function computeRms(samples) {
@@ -150,6 +187,19 @@ async function processQueue() {
 }
 
 async function enqueueSamples(samples) {
+  const rms = computeRms(samples);
+  logAndRender('audio', `收到片段：frames=${samples.length} rms=${rms.toFixed(4)}`);
+
+  if (rms < 0.0005) {
+    state.silentChunkStreak += 1;
+    if (state.silentChunkStreak === 3) {
+      ui.setRuntimeHint('目前收到的音訊片段幾乎是完全靜音，請試著切換到其他輸入裝置或確認 macOS 的目前輸入來源。');
+      logAndRender('audio', '連續 3 段音訊接近靜音，建議切換收音裝置');
+    }
+  } else {
+    state.silentChunkStreak = 0;
+  }
+
   state.queue.push(samples);
 
   if (state.queue.length > 3) {
@@ -157,6 +207,27 @@ async function enqueueSamples(samples) {
   }
 
   await processQueue();
+}
+
+async function refreshInputDevices() {
+  if (!navigator.mediaDevices?.enumerateDevices) {
+    logAndRender('device', '這個平台不支援 enumerateDevices');
+    return;
+  }
+
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const audioInputs = devices.filter((device) => device.kind === 'audioinput');
+  ui.renderInputDevices(audioInputs, ui.getInputDeviceId());
+
+  if (audioInputs.length === 0) {
+    logAndRender('device', '目前沒有列出任何 audioinput 裝置');
+    return;
+  }
+
+  const labels = audioInputs.map((device, index) => (
+    `${index + 1}. ${formatAudioInputLabel(device, index)}`
+  ));
+  logAndRender('device', `找到 ${audioInputs.length} 個輸入裝置：${labels.join(' | ')}`);
 }
 
 async function warmupCurrentModels() {
@@ -198,6 +269,11 @@ async function startListening() {
 
   try {
     const microphoneAccess = await bridge.ensureMicrophoneAccess();
+    logAndRender(
+      'microphone',
+      `macOS microphone status=${microphoneAccess?.status ?? 'unknown'}`,
+    );
+
     if (!microphoneAccess?.ok) {
       if (microphoneAccess?.status === 'denied') {
         throw new Error(
@@ -212,9 +288,17 @@ async function startListening() {
       throw new Error('麥克風權限被拒絕。請到系統設定允許這個 App 使用麥克風後再試一次。');
     }
 
+    if (microphoneAccess?.status === 'not-determined') {
+      ui.setRuntimeHint('首次開始收音時，macOS 可能會跳出麥克風權限提示。');
+    }
+
     await warmupCurrentModels();
+    await refreshInputDevices();
     logAndRender('listen', '準備呼叫 getUserMedia');
-    await capture.start();
+    state.silentChunkStreak = 0;
+    await capture.start({
+      deviceId: ui.getInputDeviceId(),
+    });
     logAndRender('audio', `收音後端：${capture.captureBackend}`);
     state.isListening = true;
     ui.setListeningState(true);
@@ -231,6 +315,8 @@ async function stopListening() {
   await capture.stop();
   state.queue = [];
   state.isListening = false;
+  state.isProcessing = false;
+  state.silentChunkStreak = 0;
 
   ui.setListeningState(false);
   ui.setStatus('idle', '待機中');
@@ -255,16 +341,7 @@ async function toggleListening() {
   } catch (error) {
     const message = describeError(error);
     logAndRender('error', message);
-    ui.setStatus('idle', '錯誤');
-    ui.setRuntimeHint(message);
-    state.isListening = false;
-    ui.setListeningState(false);
-
-    try {
-      await syncSessionState('error');
-    } catch (syncError) {
-      logAndRender('error', describeError(syncError));
-    }
+    await enterErrorState(message);
   } finally {
     ui.refs.startStopButton.disabled = false;
   }
@@ -291,6 +368,9 @@ async function bootstrap() {
   bridge.ensureVersion();
 
   const runtimeInfo = await bridge.getRuntimeInfo();
+  await refreshInputDevices().catch((error) => {
+    logAndRender('device-error', describeError(error));
+  });
   const platformNotes = [
     `模型快取位置：${runtimeInfo.modelCacheDir}。`,
     '目前預設可直接拖曳整個字幕窗；開啟點擊穿透後才會放過滑鼠事件。',
@@ -384,6 +464,12 @@ async function bootstrap() {
     }
   });
 
+  ui.refs.refreshDevicesButton.addEventListener('click', () => {
+    void refreshInputDevices().catch((error) => {
+      logAndRender('device-error', describeError(error));
+    });
+  });
+
   ui.refs.overlayVisibleCheckbox.addEventListener('change', () => {
     void syncOverlaySettings();
   });
@@ -421,16 +507,7 @@ window.addEventListener('unhandledrejection', async (event) => {
     event.reason instanceof Error ? event.reason : new Error(String(event.reason));
   const message = describeError(reason);
   logAndRender('unhandledrejection', message);
-  ui.setStatus('idle', '錯誤');
-  ui.setRuntimeHint(message);
-  state.isListening = false;
-  ui.setListeningState(false);
-
-  try {
-    await syncSessionState('error');
-  } catch (error) {
-    logAndRender('error', describeError(error));
-  }
+  await enterErrorState(message);
 });
 
 window.addEventListener('error', async (event) => {
@@ -440,16 +517,7 @@ window.addEventListener('error', async (event) => {
       : new Error(event.message || 'Unknown renderer error');
   const message = describeError(reason);
   logAndRender('error', message);
-  ui.setStatus('idle', '錯誤');
-  ui.setRuntimeHint(message);
-  state.isListening = false;
-  ui.setListeningState(false);
-
-  try {
-    await syncSessionState('error');
-  } catch (error) {
-    logAndRender('error', describeError(error));
-  }
+  await enterErrorState(message);
 });
 
 void bootstrap().catch((error) => {

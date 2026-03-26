@@ -34,9 +34,10 @@ export function concatFloat32Arrays(chunks, totalLength) {
 }
 
 export class PcmCapture {
-  constructor({ chunkDurationMs, onChunk }) {
+  constructor({ chunkDurationMs, onChunk, onDebug = () => {} }) {
     this.chunkDurationMs = chunkDurationMs;
     this.onChunk = onChunk;
+    this.onDebug = onDebug;
     this.audioContext = null;
     this.mediaStream = null;
     this.mediaStreamSource = null;
@@ -51,6 +52,8 @@ export class PcmCapture {
     this.isRunning = false;
     this.captureBackend = 'unknown';
     this.workletModulePromise = null;
+    this.debugSampleFrames = 0;
+    this.hasLoggedFirstSamples = false;
   }
 
   resetCaptureGraph() {
@@ -67,6 +70,8 @@ export class PcmCapture {
     this.captureBuffer = [];
     this.captureSampleCount = 0;
     this.captureBackend = 'unknown';
+    this.debugSampleFrames = 0;
+    this.hasLoggedFirstSamples = false;
   }
 
   async ensureAudioContext() {
@@ -84,6 +89,24 @@ export class PcmCapture {
   handleSamples(input) {
     if (!this.isRunning || !input?.length) {
       return;
+    }
+
+    this.debugSampleFrames += input.length;
+    if (!this.hasLoggedFirstSamples) {
+      this.hasLoggedFirstSamples = true;
+      let peak = 0;
+      let sum = 0;
+
+      for (let index = 0; index < input.length; index += 1) {
+        const value = Math.abs(input[index]);
+        peak = Math.max(peak, value);
+        sum += input[index] * input[index];
+      }
+
+      const rms = Math.sqrt(sum / input.length);
+      this.onDebug(
+        `收到第一批樣本：frames=${input.length} peak=${peak.toFixed(4)} rms=${rms.toFixed(4)}`,
+      );
     }
 
     const copy = new Float32Array(input.length);
@@ -134,24 +157,44 @@ export class PcmCapture {
     return processorNode;
   }
 
-  async start() {
+  async start({ deviceId = '' } = {}) {
     if (this.isRunning) {
       return;
     }
 
     try {
+      const audioConstraints = {
+        channelCount: 1,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+      };
+
+      if (deviceId) {
+        audioConstraints.deviceId = { exact: deviceId };
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
+        audio: audioConstraints,
         video: false,
       });
 
       const audioContext = await this.ensureAudioContext();
+      const [audioTrack] = mediaStream.getAudioTracks();
+      if (!audioTrack) {
+        throw new Error('麥克風串流沒有 audio track。');
+      }
+
+      const trackSettings = audioTrack.getSettings?.() || {};
+      this.onDebug(
+        `getUserMedia 成功：track.readyState=${audioTrack.readyState} muted=${audioTrack.muted} enabled=${audioTrack.enabled} label=${audioTrack.label || 'unknown'} sampleRate=${trackSettings.sampleRate ?? 'unknown'} deviceId=${trackSettings.deviceId ? 'available' : 'missing'} requestedDevice=${deviceId || 'default'}`,
+      );
+      audioTrack.onmute = () => this.onDebug('麥克風 track 進入 muted 狀態');
+      audioTrack.onunmute = () => this.onDebug('麥克風 track 恢復 unmuted 狀態');
+      audioTrack.onended = () => this.onDebug('麥克風 track 已結束');
+
       this.inputSampleRate = audioContext.sampleRate;
+      this.onDebug(`AudioContext 已建立：state=${audioContext.state} sampleRate=${audioContext.sampleRate}`);
       this.chunkSampleTarget = Math.round(
         this.inputSampleRate * (this.chunkDurationMs / 1000),
       );
@@ -168,6 +211,7 @@ export class PcmCapture {
       this.captureNode.connect(this.silentGain);
       this.silentGain.connect(audioContext.destination);
       this.isRunning = true;
+      this.onDebug(`PCM capture 已啟動：backend=${this.captureBackend}`);
     } catch (error) {
       this.isRunning = false;
       this.resetCaptureGraph();
@@ -188,6 +232,10 @@ export class PcmCapture {
       this.inputSampleRate === TARGET_SAMPLE_RATE
         ? merged
         : resampleAudio(merged, this.inputSampleRate, TARGET_SAMPLE_RATE);
+
+    this.onDebug(
+      `送出音訊片段：inputFrames=${merged.length} outputFrames=${resampled.length} collectedFrames=${this.debugSampleFrames}`,
+    );
 
     await this.onChunk(resampled);
   }
