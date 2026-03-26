@@ -10,3 +10,5 @@ pnpm-debug.log*
 
 *.tmp
 *.temp
+__pycache__/
+*.pyc
